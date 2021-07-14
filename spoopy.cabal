@@ -42,7 +42,7 @@ library
     , warp >=3.3 && <4
   default-language: Haskell2010
 
-executable spoopy-exe
+executable spoopy
   main-is: Main.hs
   other-modules:
       Opts

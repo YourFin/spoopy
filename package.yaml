@@ -34,7 +34,7 @@ library:
   source-dirs: src
 
 executables:
-  spoopy-exe:
+  spoopy:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
