@@ -55,6 +55,6 @@ app basepath request respond = do
 main :: IO ()
 main = do
   opts <- Opts.runParser
-  putStrLn "Serving (" <> (Opts.root opts) <> ") on port 7979..."
+  putStrLn $ "Serving (" <> (Opts.root opts) <> ") on port 7979..."
   run 7979 $ app (Opts.root opts)
 
