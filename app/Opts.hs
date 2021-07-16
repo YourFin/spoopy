@@ -1,19 +1,32 @@
 -- | 
 
-module Opts where
+module Opts (
+  Opts(..),
+  BasePath,
+  runParser,
+  unBasePath,
+  baseFilePath,
+) where
 
 import Options.Applicative
 import System.IO (FilePath)
 import System.Directory as Dir
 
 data Opts = Opts
-  { root :: FilePath
+  { root :: BasePath
 --  , port :: Int
   }
   deriving (Show)
 
+newtype BasePath = BasePath { unBasePath :: FilePath }
+  deriving (Show)
+
+baseFilePath :: Opts -> FilePath
+baseFilePath = unBasePath . root
+
+
 parser :: FilePath -> Parser Opts
-parser defaultPath = Opts
+parser defaultPath = (Opts <$> BasePath)
   <$> strArgument
         (  help "File path that should be served"
         <> value defaultPath
