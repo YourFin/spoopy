@@ -10,6 +10,7 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
+
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -32,6 +33,24 @@ dependencies:
 - containers >= 0.6 && <0.7
 - filepath >= 1.4 && <2
 - data-default >= 0.7.1 && <0.8
+- polysemy >= 1.6 && < 2
+- polysemy-plugin >= 0.4
+
+ghc-options: -O2 -flate-specialise -fspecialise-aggressively
+default-extensions:
+  - DataKinds
+  - FlexibleContexts
+  - GADTs
+  - LambdaCase
+  - PolyKinds
+  - RankNTypes
+  - ScopedTypeVariables
+  - TypeApplications
+  - TypeOperators
+  - TypeFamilies
+  - OverloadedStrings
+  - MultiWayIf
+  - LambdaCase
 
 library:
   source-dirs: src
@@ -45,10 +64,6 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     # Language extensions
-    - -XTypeApplications
-    - -XScopedTypeVariables
-    - -XOverloadedStrings
-    - -XMultiWayIf
     dependencies:
     - spoopy
 

@@ -78,10 +78,14 @@ app basepath request respond = do
       _ -> fileNotFound
     )
 
+program :: Members '[Reader BasePath, Reader PortNum, Embed IO] r => Sem r a
+program = do
+  portNum <- Opts.askPortNum
+  basePath <- Opts.askBasePath
+  putStrLn $ "Serving (" <> basePath <> ") on port " <>  <> "..."
+
 
 main :: IO ()
 main = do
   opts <- Opts.runParser
-  putStrLn $ "Serving (" <> (Opts.baseFilePath opts) <> ") on port 7979..."
   run 7979 $ app (Opts.root opts)
-
