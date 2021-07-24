@@ -1,14 +1,14 @@
 module Main where
 
 import Data.Function ((&))
-import Network.Wai (responseLBS, Application)
+import Network.Wai (responseLBS)
 import Network.HTTP.Types (status200, notFound404)
 import Network.Wai.Handler.Warp (run)
-import Network.Wai as Wai
-import System.IO (FilePath)
-import Control.Exception (try)
-import qualified System.Posix.Files as Files
-import qualified System.Directory as Dir
+import qualified Network.Wai as Wai
+import RawFilePath (RawFilePath)
+import Control.Exception (try, bracket)
+import qualified RawFilePath.Directory as Dir
+import qualified System.Directory as SlowDir
 import Lib
 import qualified Opts as Opts
 import qualified Data.ByteString.Char8 as C
@@ -19,8 +19,9 @@ import qualified Data.List as List
 import qualified Data.Either as Either
 import Data.MimeType (MimeType)
 import qualified Data.MimeType as MimeType
+import qualified System.Posix.IO.ByteString as BPosix
 
-fileNotFound :: Response
+fileNotFound :: Wai.Response
 fileNotFound =
   responseLBS
     notFound404
@@ -32,7 +33,7 @@ data FileType
   | Directory
   | NotFound
 
-getFileType :: Opts.BasePath -> FilePath -> IO FileType
+getFileType :: Opts.BasePath -> RawFilePath -> IO FileType
 getFileType basepath fpath = do
   isShareable <- isShareable basepath fpath
   isFile <- Dir.doesFileExist fpath
@@ -44,17 +45,17 @@ getFileType basepath fpath = do
                  then Directory
                  else NotFound)
 
-isShareable :: Opts.BasePath -> FilePath -> IO Bool
+isShareable :: Opts.BasePath -> RawFilePath -> IO Bool
 isShareable basePath checkPath = do
   let base = Opts.unBasePath basePath
-  canBasePath <- Dir.canonicalizePath base
-  canCheckPath <- Dir.canonicalizePath checkPath
+  canBasePath <- SlowDir.canonicalizePath $ C.unpack base
+  canCheckPath <- SlowDir.canonicalizePath $ C.unpack checkPath
   fileMode <- safeFileMode checkPath
   pure $ (List.isPrefixOf canBasePath canCheckPath)
          && (isOtherReadable fileMode)
     where
       safeFileMode fpath =
-        Posix.getFileStatus fpath
+        getFileStatus fpath
           -- default to no permissions when the file doesn't exist
           & fmap Posix.fileMode
           & try @IOError
@@ -62,18 +63,35 @@ isShareable basePath checkPath = do
       isOtherReadable fileMode =
         (Posix.intersectFileModes Posix.otherReadMode fileMode)
           == Posix.otherReadMode
+
+getFileStatus :: RawFilePath -> IO Posix.FileStatus
+getFileStatus path =
+  bracket (BPosix.openFd
+              path
+              BPosix.ReadOnly
+              Nothing
+              BPosix.OpenFileFlags
+                { BPosix.append = False
+                , BPosix.exclusive = False
+                , BPosix.noctty = False
+                , BPosix.nonBlock = False
+                , BPosix.trunc = False
+                }
+          )
+          BPosix.closeFd
+          Posix.getFdStatus
     
-app :: Opts.BasePath -> Application
+app :: Opts.BasePath -> Wai.Application
 app basepath request respond = do
-  let fullPath = (Opts.unBasePath basepath) <> (C.unpack $ Wai.rawPathInfo request)
+  let fullPath = (Opts.unBasePath basepath) <> (Wai.rawPathInfo request)
   fType <- getFileType basepath fullPath
   respond
     (case fType of
       File mimeType ->
-        responseFile
+        Wai.responseFile
           status200
           [("Content-Type", MimeType.unwrap mimeType)]
-          fullPath
+          (C.unpack fullPath)
           Nothing
       _ -> fileNotFound
     )
@@ -82,6 +100,6 @@ app basepath request respond = do
 main :: IO ()
 main = do
   opts <- Opts.runParser
-  putStrLn $ "Serving (" <> (Opts.baseFilePath opts) <> ") on port 7979..."
+  C.putStrLn $ "Serving (" <> (Opts.baseFilePath opts) <> ") on port 7979..."
   run 7979 $ app (Opts.root opts)
 

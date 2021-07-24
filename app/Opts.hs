@@ -9,8 +9,9 @@ module Opts (
 ) where
 
 import Options.Applicative
-import System.IO (FilePath)
-import System.Directory as Dir
+import RawFilePath (RawFilePath)
+import qualified System.Directory as SlowDir
+import Data.String (fromString)
 
 data Opts = Opts
   { root :: BasePath
@@ -18,14 +19,14 @@ data Opts = Opts
   }
   deriving (Show)
 
-newtype BasePath = BasePath { unBasePath :: FilePath }
+newtype BasePath = BasePath { unBasePath :: RawFilePath }
   deriving (Show)
 
-baseFilePath :: Opts -> FilePath
+baseFilePath :: Opts -> RawFilePath
 baseFilePath = unBasePath . root
 
 
-parser :: FilePath -> Parser Opts
+parser :: RawFilePath -> Parser Opts
 parser defaultPath = (Opts <$> BasePath)
   <$> strArgument
         (  help "File path that should be served"
@@ -35,7 +36,7 @@ parser defaultPath = (Opts <$> BasePath)
 
 runParser :: IO Opts
 runParser = do
-  cwd <- Dir.getCurrentDirectory
+  cwd <- fmap fromString SlowDir.getCurrentDirectory
   execParser (opts cwd)
   where
     opts cwd = info ((parser cwd) <**> helper)

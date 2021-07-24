@@ -7,8 +7,8 @@ import Data.Maybe (fromMaybe)
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
-import System.FilePath (FilePath)
-import qualified System.FilePath as FilePath
+import System.FilePath.ByteString (RawFilePath)
+import qualified System.FilePath.ByteString as FilePath
 import Data.Default
 
 
@@ -18,16 +18,18 @@ newtype MimeType = MimeType { unwrap :: B.ByteString }
 instance Default MimeType where
   def = MimeType "application/octet-stream"
 
-get :: FilePath -> MimeType
+get :: RawFilePath -> MimeType
 get fpath =
-  case FilePath.takeExtension fpath of
-    (char : ext)
-      | FilePath.isExtSeparator char ->
-        Map.lookup ext extensionMap
-         & fromMaybe def
-    _ -> def
+  case B.uncons extension of
+    Just (sep, ext) | FilePath.isExtSeparator sep ->
+      Map.lookup ext extensionMap
+       & fromMaybe def
+    _ ->
+      def
+  where
+    extension = FilePath.takeExtension fpath
       
-extensionMap :: Map String MimeType
+extensionMap :: Map B.ByteString MimeType
 extensionMap =
   fmap MimeType $ Map.fromList 
   -- See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
